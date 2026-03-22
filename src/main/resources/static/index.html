@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Spring Boot WebSocket Chat</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.1.4/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+</head>
+
+<body style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
+    <h2 style="text-align: center;">Chat Room Sederhana</h2>
+
+    <div id="welcome-page" style="text-align: center; margin-top: 50px;">
+        <input type="text" id="name" placeholder="Masukkan Namamu" style="padding: 10px; width: 60%;" />
+        <button onclick="connect()" style="padding: 10px 20px;">Mulai Chat</button>
+    </div>
+
+    <div id="chat-page" style="display:none;">
+        <div id="messageArea"
+            style="border: 1px solid #ccc; height: 350px; padding: 15px; overflow-y: auto; margin-bottom: 15px; background-color: #f9f9f9;">
+        </div>
+        <div style="display: flex;">
+            <input type="text" id="message" placeholder="Ketik pesan..." style="flex: 1; padding: 10px;" />
+            <button onclick="sendMessage()" style="padding: 10px 20px; margin-left: 10px;">Kirim</button>
+        </div>
+    </div>
+
+    <script>
+        var stompClient = null;
+        var username = null;
+
+        function connect() {
+            username = document.querySelector('#name').value.trim();
+            if (username) {
+                document.querySelector('#welcome-page').style.display = 'none';
+                document.querySelector('#chat-page').style.display = 'block';
+
+                var socket = new SockJS('/ws');
+                stompClient = Stomp.over(socket);
+                stompClient.connect({}, onConnected, onError);
+            } else {
+                alert("Nama tidak boleh kosong!");
+            }
+        }
+
+        function onConnected() {
+            stompClient.subscribe('/topic/public', onMessageReceived);
+
+            stompClient.send("/app/chat.addUser", {}, JSON.stringify({ sender: username, type: 'JOIN' }));
+        }
+
+        function onError(error) {
+            alert('Gagal terhubung ke server WebSocket. Pastikan Spring Boot sudah di-Run.');
+        }
+
+        function sendMessage() {
+            var messageInput = document.querySelector('#message');
+            var messageContent = messageInput.value.trim();
+
+            if (messageContent && stompClient) {
+                var chatMessage = {
+                    sender: username,
+                    content: messageContent,
+                    type: 'CHAT'
+                };
+                stompClient.send("/app/chat.sendMessage", {}, JSON.stringify(chatMessage));
+                messageInput.value = '';
+            }
+        }
+
+        function onMessageReceived(payload) {
+            var message = JSON.parse(payload.body);
+            var messageArea = document.querySelector('#messageArea');
+            var messageElement = document.createElement('div');
+            messageElement.style.marginBottom = '10px';
+
+            if (message.type === 'JOIN') {
+                messageElement.innerHTML = '<em><span style="color: green;">' + message.sender + ' bergabung ke dalam chat!</span></em>';
+            } else if (message.type === 'LEAVE') {
+                messageElement.innerHTML = '<em><span style="color: red;">' + message.sender + ' keluar dari chat.</span></em>';
+            } else {
+                var isMyMessage = message.sender === username;
+                messageElement.innerHTML = '<strong>' + message.sender + ':</strong> ' + message.content;
+                if (isMyMessage) {
+                    messageElement.style.color = '#0056b3';
+                }
+            }
+
+            messageArea.appendChild(messageElement);
+            messageArea.scrollTop = messageArea.scrollHeight; 
+        }
+
+        document.querySelector('#message').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+
+</html>
