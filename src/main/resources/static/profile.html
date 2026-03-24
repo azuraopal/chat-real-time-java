@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profil — ChatApp</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .profile-wrapper {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--wa-dark);
+            position: relative;
+        }
+        .profile-wrapper::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 220px;
+            background: linear-gradient(135deg, var(--gradient-1), var(--gradient-2));
+            z-index: 0;
+        }
+        .profile-card {
+            position: relative;
+            z-index: 1;
+            background: var(--wa-dark-lighter);
+            border-radius: var(--radius-lg);
+            padding: 40px;
+            width: 100%;
+            max-width: 480px;
+            box-shadow: var(--shadow-lg);
+            animation: slideUp 0.5s ease-out;
+        }
+        .profile-photo-section {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+        .profile-photo-wrapper {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+        }
+        .profile-photo {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            font-weight: 600;
+            color: white;
+            text-transform: uppercase;
+            overflow: hidden;
+            border: 3px solid var(--wa-green);
+            box-shadow: 0 4px 20px rgba(0,168,132,0.3);
+        }
+        .profile-photo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .photo-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 28px;
+        }
+        .profile-photo-wrapper:hover .photo-overlay {
+            opacity: 1;
+        }
+        .profile-username {
+            color: var(--wa-text-secondary);
+            font-size: 14px;
+            margin-top: 12px;
+        }
+        .char-count {
+            text-align: right;
+            font-size: 11px;
+            color: var(--wa-text-secondary);
+            margin-top: 4px;
+        }
+        .profile-nav {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 24px;
+        }
+        .profile-nav a {
+            color: var(--wa-text-secondary);
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .profile-nav a:hover {
+            color: var(--wa-text-primary);
+        }
+    </style>
+</head>
+<body>
+    <div class="profile-wrapper">
+        <div class="profile-card">
+            <div class="profile-nav">
+                <a href="/chat.html">← Kembali ke Chat</a>
+                <a href="#" onclick="logout()">Logout ⏻</a>
+            </div>
+
+            <div class="profile-photo-section">
+                <div class="profile-photo-wrapper" onclick="document.getElementById('photoInput').click()">
+                    <div class="profile-photo" id="profilePhoto"></div>
+                    <div class="photo-overlay">📷</div>
+                </div>
+                <input type="file" id="photoInput" accept="image/*" style="display:none" onchange="handlePhotoUpload(event)">
+                <div class="profile-username" id="profileUsername">@username</div>
+            </div>
+
+            <div class="auth-error" id="errorMsg"></div>
+            <div class="auth-success" id="successMsg"></div>
+
+            <form onsubmit="saveProfile(event)">
+                <div class="form-group">
+                    <label for="displayName">Nama Tampilan</label>
+                    <input type="text" class="form-input" id="displayName" placeholder="Nama tampilan Anda" maxlength="50">
+                </div>
+                <div class="form-group">
+                    <label for="bio">Bio</label>
+                    <input type="text" class="form-input" id="bio" placeholder="Tulis sesuatu tentang Anda..." maxlength="200" oninput="updateCharCount()">
+                    <div class="char-count"><span id="charCount">0</span>/200</div>
+                </div>
+                <button type="submit" class="btn btn-primary" id="saveBtn">
+                    Simpan Profil
+                </button>
+            </form>
+
+            <div style="margin-top:20px; text-align:center;">
+                <button onclick="removePhoto()" style="background:none;border:none;color:#FF6B6B;cursor:pointer;font-size:13px;font-family:inherit;">
+                    🗑️ Hapus Foto Profil
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const token = localStorage.getItem('token');
+        if (!token) window.location.href = '/login.html';
+
+        let currentPhotoBase64 = '';
+
+        async function loadProfile() {
+            try {
+                const res = await fetch('/api/auth/me', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (res.status === 401) { window.location.href = '/login.html'; return; }
+                const data = await res.json();
+
+                document.getElementById('displayName').value = data.displayName || '';
+                document.getElementById('bio').value = data.bio || '';
+                document.getElementById('profileUsername').textContent = '@' + data.username;
+                currentPhotoBase64 = data.profilePhoto || '';
+                updateCharCount();
+                renderPhoto(data.avatarColor, data.username, data.profilePhoto);
+            } catch (e) {
+                console.error('Failed to load profile:', e);
+            }
+        }
+
+        function renderPhoto(color, username, photo) {
+            const el = document.getElementById('profilePhoto');
+            if (photo) {
+                el.innerHTML = '<img src="' + photo + '" alt="Profile">';
+                el.style.background = 'transparent';
+            } else {
+                el.textContent = username ? username.charAt(0).toUpperCase() : '?';
+                el.style.background = color || '#00A884';
+            }
+        }
+
+        function handlePhotoUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (file.size > 2 * 1024 * 1024) {
+                document.getElementById('errorMsg').textContent = 'Ukuran foto maksimal 2MB!';
+                document.getElementById('errorMsg').style.display = 'block';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                currentPhotoBase64 = e.target.result;
+                const el = document.getElementById('profilePhoto');
+                el.innerHTML = '<img src="' + currentPhotoBase64 + '" alt="Profile">';
+                el.style.background = 'transparent';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removePhoto() {
+            currentPhotoBase64 = '';
+            const color = localStorage.getItem('avatarColor') || '#00A884';
+            const username = localStorage.getItem('username') || '?';
+            renderPhoto(color, username, '');
+        }
+
+        function updateCharCount() {
+            const bio = document.getElementById('bio').value;
+            document.getElementById('charCount').textContent = bio.length;
+        }
+
+        async function saveProfile(e) {
+            e.preventDefault();
+            const btn = document.getElementById('saveBtn');
+            const errorDiv = document.getElementById('errorMsg');
+            const successDiv = document.getElementById('successMsg');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span>';
+            errorDiv.style.display = 'none';
+            successDiv.style.display = 'none';
+
+            try {
+                const res = await fetch('/api/auth/profile', {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        displayName: document.getElementById('displayName').value.trim(),
+                        bio: document.getElementById('bio').value.trim(),
+                        profilePhoto: currentPhotoBase64
+                    })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    successDiv.textContent = 'Profil berhasil disimpan!';
+                    successDiv.style.display = 'block';
+                    localStorage.setItem('displayName', data.displayName);
+                    localStorage.setItem('avatarColor', data.avatarColor);
+                    if (data.profilePhoto) localStorage.setItem('profilePhoto', data.profilePhoto);
+                    else localStorage.removeItem('profilePhoto');
+                } else {
+                    errorDiv.textContent = data.message || 'Gagal menyimpan profil!';
+                    errorDiv.style.display = 'block';
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Gagal terhubung ke server.';
+                errorDiv.style.display = 'block';
+            }
+
+            btn.disabled = false;
+            btn.innerHTML = 'Simpan Profil';
+        }
+
+        function logout() {
+            localStorage.clear();
+            window.location.href = '/login.html';
+        }
+
+        loadProfile();
+    </script>
+</body>
+</html>
