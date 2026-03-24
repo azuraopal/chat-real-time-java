@@ -15,6 +15,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
 
@@ -42,7 +43,6 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) {
-
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
 
@@ -50,8 +50,6 @@ public class AuthController {
         String jwt = jwtUtils.generateJwtToken(authentication);
 
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-
-        // Get user profile info
         User user = userRepository.findByUsername(userDetails.getUsername()).orElse(null);
         String displayName = user != null && user.getDisplayName() != null ? user.getDisplayName() : userDetails.getUsername();
         String avatarColor = user != null && user.getAvatarColor() != null ? user.getAvatarColor() : "#00A884";
@@ -71,12 +69,12 @@ public class AuthController {
                     .body(Map.of("message", "Error: Username is already taken!"));
         }
 
-        // Create new user's account
         User user = new User();
         user.setUsername(signUpRequest.getUsername());
         user.setPassword(encoder.encode(signUpRequest.getPassword()));
         user.setDisplayName(signUpRequest.getUsername());
         user.setAvatarColor(AVATAR_COLORS[new Random().nextInt(AVATAR_COLORS.length)]);
+        user.setBio("Hey there! I am using ChatApp");
 
         userRepository.save(user);
 
@@ -95,11 +93,53 @@ public class AuthController {
             return ResponseEntity.status(404).body(Map.of("message", "User not found"));
         }
 
-        return ResponseEntity.ok(Map.of(
-                "id", user.getId(),
-                "username", user.getUsername(),
-                "displayName", user.getDisplayName() != null ? user.getDisplayName() : user.getUsername(),
-                "avatarColor", user.getAvatarColor() != null ? user.getAvatarColor() : "#00A884"
-        ));
+        Map<String, Object> result = new HashMap<>();
+        result.put("id", user.getId());
+        result.put("username", user.getUsername());
+        result.put("displayName", user.getDisplayName() != null ? user.getDisplayName() : user.getUsername());
+        result.put("avatarColor", user.getAvatarColor() != null ? user.getAvatarColor() : "#00A884");
+        result.put("bio", user.getBio() != null ? user.getBio() : "");
+        result.put("profilePhoto", user.getProfilePhoto() != null ? user.getProfilePhoto() : "");
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * Update profile (displayName, bio, profilePhoto)
+     */
+    @PutMapping("/profile")
+    public ResponseEntity<?> updateProfile(@RequestBody Map<String, String> body, Authentication authentication) {
+        if (authentication == null) {
+            return ResponseEntity.status(401).body(Map.of("message", "Not authenticated"));
+        }
+        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+        User user = userRepository.findByUsername(userDetails.getUsername()).orElse(null);
+
+        if (user == null) {
+            return ResponseEntity.status(404).body(Map.of("message", "User not found"));
+        }
+
+        if (body.containsKey("displayName") && body.get("displayName") != null) {
+            user.setDisplayName(body.get("displayName"));
+        }
+        if (body.containsKey("bio")) {
+            user.setBio(body.get("bio"));
+        }
+        if (body.containsKey("profilePhoto")) {
+            user.setProfilePhoto(body.get("profilePhoto"));
+        }
+        if (body.containsKey("avatarColor") && body.get("avatarColor") != null) {
+            user.setAvatarColor(body.get("avatarColor"));
+        }
+
+        userRepository.save(user);
+
+        // Update localStorage values
+        Map<String, Object> result = new HashMap<>();
+        result.put("message", "Profile updated successfully!");
+        result.put("displayName", user.getDisplayName());
+        result.put("avatarColor", user.getAvatarColor());
+        result.put("bio", user.getBio() != null ? user.getBio() : "");
+        result.put("profilePhoto", user.getProfilePhoto() != null ? user.getProfilePhoto() : "");
+        return ResponseEntity.ok(result);
     }
 }
