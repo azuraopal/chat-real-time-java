@@ -8,38 +8,29 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "messages")
+@Table(name = "chat_rooms")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Message {
+public class ChatRoom {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "sender_id", nullable = false)
-    private User sender;
+    @JoinColumn(name = "user1_id", nullable = false)
+    private User user1;
 
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "chat_room_id")
-    private ChatRoom chatRoom;
-
-    @Column(nullable = false, columnDefinition = "TEXT")
-    private String content;
+    @JoinColumn(name = "user2_id", nullable = false)
+    private User user2;
 
     @Column(nullable = false)
-    private LocalDateTime timestamp;
-
-    @Column(length = 20)
-    private String status;
+    private LocalDateTime createdAt;
 
     @PrePersist
     protected void onCreate() {
-        this.timestamp = LocalDateTime.now();
-        if (this.status == null) {
-            this.status = "DELIVERED";
-        }
+        this.createdAt = LocalDateTime.now();
     }
 }
