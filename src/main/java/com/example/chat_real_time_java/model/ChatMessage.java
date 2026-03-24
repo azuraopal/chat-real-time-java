@@ -10,6 +10,7 @@ public class ChatMessage {
     private String timestamp;
     private MessageStatus status;
     private String avatarColor;
+    private String profilePhoto;
 
     public enum MessageType {
         CHAT, JOIN, LEAVE
@@ -19,67 +20,30 @@ public class ChatMessage {
         SENT, DELIVERED, READ
     }
 
-    public String getContent() {
-        return content;
-    }
+    public String getContent() { return content; }
+    public void setContent(String content) { this.content = content; }
 
-    public void setContent(String content) {
-        this.content = content;
-    }
+    public String getSender() { return sender; }
+    public void setSender(String sender) { this.sender = sender; }
 
-    public String getSender() {
-        return sender;
-    }
+    public String getRecipient() { return recipient; }
+    public void setRecipient(String recipient) { this.recipient = recipient; }
 
-    public void setSender(String sender) {
-        this.sender = sender;
-    }
+    public Long getRoomId() { return roomId; }
+    public void setRoomId(Long roomId) { this.roomId = roomId; }
 
-    public String getRecipient() {
-        return recipient;
-    }
+    public MessageType getType() { return type; }
+    public void setType(MessageType type) { this.type = type; }
 
-    public void setRecipient(String recipient) {
-        this.recipient = recipient;
-    }
+    public String getTimestamp() { return timestamp; }
+    public void setTimestamp(String timestamp) { this.timestamp = timestamp; }
 
-    public Long getRoomId() {
-        return roomId;
-    }
+    public MessageStatus getStatus() { return status; }
+    public void setStatus(MessageStatus status) { this.status = status; }
 
-    public void setRoomId(Long roomId) {
-        this.roomId = roomId;
-    }
+    public String getAvatarColor() { return avatarColor; }
+    public void setAvatarColor(String avatarColor) { this.avatarColor = avatarColor; }
 
-    public MessageType getType() {
-        return type;
-    }
-
-    public void setType(MessageType type) {
-        this.type = type;
-    }
-
-    public String getTimestamp() {
-        return timestamp;
-    }
-
-    public void setTimestamp(String timestamp) {
-        this.timestamp = timestamp;
-    }
-
-    public MessageStatus getStatus() {
-        return status;
-    }
-
-    public void setStatus(MessageStatus status) {
-        this.status = status;
-    }
-
-    public String getAvatarColor() {
-        return avatarColor;
-    }
-
-    public void setAvatarColor(String avatarColor) {
-        this.avatarColor = avatarColor;
-    }
+    public String getProfilePhoto() { return profilePhoto; }
+    public void setProfilePhoto(String profilePhoto) { this.profilePhoto = profilePhoto; }
 }

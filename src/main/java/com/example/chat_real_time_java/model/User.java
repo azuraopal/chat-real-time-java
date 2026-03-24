@@ -21,4 +21,16 @@ public class User {
 
     @Column(nullable = false)
     private String password;
+
+    @Column(length = 50)
+    private String displayName;
+
+    @Column(length = 7)
+    private String avatarColor;
+
+    @Column(length = 200)
+    private String bio;
+
+    @Column(columnDefinition = "LONGTEXT")
+    private String profilePhoto;
 }
